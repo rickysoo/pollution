@@ -4,7 +4,7 @@ library(stringr)
 dir = 'specdata'
 min <- 1
 max <- 332
-default <- 5
+default <- 20
 
 
 read_file <- function(ID) {
@@ -50,34 +50,3 @@ corr <- function(threshold = 0) {
     
     return (vec)
 }
-
-# Tests
-
-# pollutantmean("sulfate", 1:10)
-# pollutantmean("nitrate", 70:72)
-# pollutantmean("nitrate", 23)
-# 
-# complete(c(2, 4, 8, 10, 12))
-# complete(30:25)
-# complete(3)
-# 
-# cr <- corr(150)
-# head(cr)
-# summary(cr)
-# 
-# cr <- corr(400)
-# head(cr)
-# summary(cr)
-# 
-# cr <- corr(5000)
-# summary(cr)
-# length(cr)
-# 
-# cr <- corr()
-# summary(cr)
-# length(cr)
-
-# Shiny ideas
-# 
-# Pollution means side by side bar chart
-# Number of complete cases

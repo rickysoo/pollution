@@ -7,90 +7,106 @@ ui <- fluidPage(
     theme = shinytheme('slate'),
     
     titlePanel('Exploring Air Pollution - Sulfate and Nitrate'),
-    p('The air pollution levels of sulfate and nitrate were monitored in 332 locations across the United States. Please use the slider to choose the number of locations, then click on tabs below to explore and visualize the data.'),
-    em('Data source - R Programming assignment by John Hopkins University on Coursera'),
+    p('The levels of sulfate and nitrate were reported in 332 locations across the United States. Use the sliders below to explore and visualize the data.'),
+    p('GitHub - ', a('https://github.com/rickysoo/pollution', href = 'https://github.com/rickysoo/pollution')),
     hr(),
     
-    sliderInput(
-        inputId = 'Number',
-        label = paste0('Choose the number of locations (1 to ', max, '):'),
-        min = min,
-        max = max,
-        value = default,
-        width = '100%'
-    ),
     
-    tabsetPanel(
-        tabPanel('Locations', tableOutput(outputId = 'locations')),
-        tabPanel('Sulfate', plotOutput(outputId = 'sulfate')),
-        tabPanel('Nitrate', plotOutput(outputId = 'nitrate')),
-        tabPanel('Correlation', plotOutput(outputId = 'correlation'))
+    sidebarLayout(
+        sidebarPanel(
+            sliderInput(
+                inputId = 'Number',
+                label = paste0('Choose the number of locations (1 to ', max, '):'),
+                min = min,
+                max = max,
+                value = default,
+                width = '100%'
+            ),
+        
+            sliderInput(
+                inputId = 'Threshold',
+                label = 'Use only locations with minimum number of reports:',
+                min = 0,
+                max = 1000,
+                value = 0,
+                width = '100%'
+            )
+        ),
+    
+        mainPanel(    
+            tabsetPanel(
+                tabPanel('Locations', tableOutput(outputId = 'locations')),
+                tabPanel('Pollutants', plotOutput(outputId = 'pollutants')),
+                tabPanel('Distributions', plotOutput(outputId = 'distributions')),
+                tabPanel('Correlation', plotOutput(outputId = 'correlation'))
+            )
+        )
     )
 )
 
-server<- function(input, output) {
+server<- function(input, output, session) {
     load_data <- reactive({
-        df <- get_data()
-        return(df)
-    })
-    
-    load_df <- function(size) {
-        df <- load_data()
-        # samples <- sample(1:max, size = size, replace = FALSE)
-        # df <- (subset(df, df$ID %in% samples))
-        df <- (subset(df, df$ID %in% 1:size))
-        return (df)
-    }
-
-    group_df <- function(size) {
-        df <- load_df(input$Number) %>%
+        df <- get_data() %>%
             rename(`Location ID` = ID) %>%
             group_by(`Location ID`) %>%
             summarise(
-                Observations = n(),
-                `Sulfate (Mean)` = mean(sulfate),
-                `Sulfate (SD)` = sd(sulfate),
-                `Nitrate (Mean)` = mean(nitrate),
-                `Nitrate (SD)` = sd(nitrate)
+                Reports = n(),
+                `Sulfate` = mean(sulfate),
+                `Nitrate` = mean(nitrate)
             ) %>%
             arrange(`Location ID`)
-        
+
+        return(df)
+    })
+    
+    get_locations <- function(size, threshold = 100) {
+        df <- load_data() %>%
+            filter(`Location ID` <= size & Reports >= threshold)
         return (df)
     }
     
     output$locations <- renderTable(
-        group_df(input$Number),
+        get_locations(input$Number, input$Threshold),
         bordered = TRUE,
         striped = TRUE,
         hover = TRUE
     )
     
-    output$sulfate <- renderPlot({
-        df <- group_df(input$Number)
-        x <- df[['Sulfate (Mean)']]
+    output$pollutants <- renderPlot({
+        df <- get_locations(input$Number, input$Threshold)
 
-        hist(x, breaks = 'sturges',
-            main = 'Sulfate Mean Levels',
-            xlab = 'Means of Sulfate Level',
-            ylab = 'Number of Locations'
-        )
-    })
-
-    output$nitrate <- renderPlot({
-        df <- group_df(input$Number)
-        x <- df[['Nitrate (Mean)']]
+        par(mfrow = c(1, 2))
         
-        hist(x, breaks = 'sturges',
+        hist(df$Sulfate, breaks = 'sturges',
+             main = 'Sulfate Mean Levels',
+             xlab = 'Means of Sulfate Level',
+             ylab = 'Number of Locations'
+        )
+    
+        hist(df$Nitrate, breaks = 'sturges',
              main = 'Nitrate Mean Levels',
              xlab = 'Means of Nitrate Level',
              ylab = 'Number of Locations'
         )
     })
     
+    output$distributions <- renderPlot({
+        df <- get_locations(input$Number, input$Threshold)
+        x <- df$Sulfate
+        y <- df$Nitrate
+        
+        boxplot(y, x,
+            horizontal = TRUE,
+            names = c('Nitrate', 'Sulfate'),
+            main = 'Comparison of Sulfate and Nitrate Mean Levels',
+            xlab = 'Means of Pollutant Level'
+        )
+    })
+    
     output$correlation <- renderPlot({
-        df <- group_df(input$Number)
-        x <- df[['Sulfate (Mean)']]
-        y <- df[['Nitrate (Mean)']]
+        df <- get_locations(input$Number, input$Threshold)
+        x <- df$Sulfate
+        y <- df$Nitrate
 
         plot(x, y,
              main = 'Sulfate and Nitrate Mean Levels',
@@ -98,7 +114,6 @@ server<- function(input, output) {
              ylab = 'Means of Nitrate Level'
         )
         
-        # abline(lm(y ~ x, data = df), col = 'blue')
         lines(lowess(x, y), col = 'blue')
     })
 }
