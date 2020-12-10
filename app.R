@@ -1,8 +1,5 @@
 source('utils.R')
 
-library(shiny)
-library(shinythemes)
-
 ui <- fluidPage(
     theme = shinytheme('slate'),
     
@@ -10,7 +7,6 @@ ui <- fluidPage(
     p('The levels of sulfate and nitrate were reported in 332 locations across the United States. Use the sliders below to explore and visualize the data.'),
     p('GitHub - ', a('https://github.com/rickysoo/pollution', href = 'https://github.com/rickysoo/pollution')),
     hr(),
-    
     
     sidebarLayout(
         sidebarPanel(
@@ -36,6 +32,7 @@ ui <- fluidPage(
         mainPanel(    
             tabsetPanel(
                 tabPanel('Locations', tableOutput(outputId = 'locations')),
+                tabPanel('Reports', plotOutput(outputId = 'reports')),
                 tabPanel('Pollutants', plotOutput(outputId = 'pollutants')),
                 tabPanel('Distributions', plotOutput(outputId = 'distributions')),
                 tabPanel('Correlation', plotOutput(outputId = 'correlation'))
@@ -71,6 +68,18 @@ server<- function(input, output, session) {
         striped = TRUE,
         hover = TRUE
     )
+    
+    output$reports <- renderPlot({
+        df <- get_locations(input$Number, input$Threshold)
+        
+        barplot(df$Reports,
+            horiz = TRUE,
+            names.arg = df[['Location ID']],
+            main = 'Reports Across Locations',
+            xlab = 'Number of Reports',
+            ylab = 'Location'
+        )
+    })
     
     output$pollutants <- renderPlot({
         df <- get_locations(input$Number, input$Threshold)
