@@ -83,16 +83,19 @@ server<- function(input, output, session) {
     
     output$pollutants <- renderPlot({
         df <- get_locations(input$Number, input$Threshold)
-
-        par(mfrow = c(1, 2))
+        x_max <- max(df$Sulfate, df$Nitrate) * 1.1
+        
+        par(mfrow = c(2, 1))
         
         hist(df$Sulfate, breaks = 'sturges',
+             xlim = c(0, x_max),
              main = 'Sulfate Mean Levels',
              xlab = 'Means of Sulfate Level',
              ylab = 'Number of Locations'
         )
     
         hist(df$Nitrate, breaks = 'sturges',
+             xlim = c(0, x_max),
              main = 'Nitrate Mean Levels',
              xlab = 'Means of Nitrate Level',
              ylab = 'Number of Locations'
